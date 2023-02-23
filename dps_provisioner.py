@@ -7,20 +7,6 @@ import time
 
 import requests
 
-# registration_id=testdevice2
-# curl -L -i -X PUT --cert certificates/certs/$registration_id-full-chain.cert.pem \
-#             --key certificates/private/$registration_id.key.pem \
-#             -H 'Content-Type: application/json' \
-#             -H 'Content-Encoding:  utf-8' \
-#             -d "{'registrationId': '$registration_id'}" \
-#             https://$PROVISIONING_HOST/$PROVISIONING_IDSCOPE/registrations/$registration_id/register?api-version=2021-06-01
-
-# curl -L -i -X GET --cert certificates/certs/$registration_id-full-chain.cert.pem \
-#             --key certificates/private/$registration_id.key.pem \
-#             -H 'Content-Type: application/json' \
-#             -H 'Content-Encoding:  utf-8' \
-#             https://$PROVISIONING_HOST/$PROVISIONING_IDSCOPE/registrations/$registration_id/operations/$OPERATION_ID?api-version=2021-06-01
-
 PROVISIONING_HOST = os.environ.get('PROVISIONING_HOST')
 PROVISIONING_IDSCOPE = os.environ.get('PROVISIONING_IDSCOPE')
 dps_url = f'https://{PROVISIONING_HOST}/{PROVISIONING_IDSCOPE}'
@@ -67,25 +53,31 @@ def operation_status_request(device_id, operation_id):
         return ''
     return json_response['registrationState']['assignedHub']
 
-if len(sys.argv) < 2:
-    print("You must specify the Device ID")
-    raise SystemExit(2)
 
-device_id = sys.argv[1]
-operation_id = registration_request(device_id)
+def main():
+    if len(sys.argv) < 2:
+        print("You must specify the Device ID")
+        raise SystemExit(2)
 
-if operation_id == '':
-    print("Registration failed")
-    raise SystemExit(2)
+    device_id = sys.argv[1]
+    operation_id = registration_request(device_id)
 
-for attempt in range(4):
-    time.sleep(pow(2, attempt))
-    print(f'Checking registration status. Attempt {attempt+1} out of 5...')
-    assignedHub = operation_status_request(device_id, operation_id)
-    if assignedHub != '':
-        print(f'Assigned endpoint: {assignedHub}')
-        break
+    if operation_id == '':
+        print("Registration failed")
+        raise SystemExit(2)
 
-if assignedHub == '':
-    print("Registration checks timed out")
-    raise SystemExit(2)
+    for attempt in range(4):
+        time.sleep(pow(2, attempt))
+        print(f'Checking registration status. Attempt {attempt+1} out of 5...')
+        assignedHub = operation_status_request(device_id, operation_id)
+        if assignedHub != '':
+            print(f'Assigned endpoint: {assignedHub}')
+            break
+
+    if assignedHub == '':
+        print("Registration checks timed out")
+        raise SystemExit(2)
+
+
+if __name__ == "__main__":
+    main()
