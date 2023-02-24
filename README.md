@@ -108,7 +108,7 @@ More specifically, the command above sets the right values for the variables:
 - `PROVISIONING_HOST` which is the hostname for DPS (default is `global.azure-devices-provisioning.net`)
 - `PROVISIONING_IDSCOPE` which is the ID for your IoT Hub DPS Instance
 
-### Provision a Device and Connect Using the Azure IoT SDK for Pythin
+### Provision a Device and Connect Using the Azure IoT SDK for Python
 Install python requirements first
 ```sh
 pip3 install -r requirements.txt
@@ -142,7 +142,14 @@ curl -L -i -X GET --cert certificates/certs/$registration_id-full-chain.cert.pem
             https://$PROVISIONING_HOST/$PROVISIONING_IDSCOPE/registrations/$registration_id/operations/$OPERATION_ID?api-version=2021-06-01
 
 ```
-### Provision a Device Using MQTT
+### Provision a Device Using Python and HTTP
+The [provision_http_x509.py](/provision_http_x509.py) script uses python and HTTPS requests to provision devices. The script simply adds a more robust flow and ease of use to the cURL calls in the section above. The env variables are still needed, so set them with the terraform command first and then run the script with the desired `device_id` as shown below.
+```sh
+$(terraform output -raw environment_variable_setup)
+python3 provision_http_x509.py testdevice3
+```
+
+### Provision a Device Using Python and MQTT
 [Azure IoT Hub DPS supports plain MQTT](https://learn.microsoft.com/en-us/azure/iot-dps/iot-dps-mqtt-support) to provision devices too.
 **TODO**
 
@@ -191,6 +198,10 @@ curl -L -i -X GET --cert certificates/certs/$registration_id-full-chain.cert.pem
             -H 'Content-Type: application/json' \
             -H 'Content-Encoding:  utf-8' \
             https://$PROVISIONING_HOST/$PROVISIONING_IDSCOPE/registrations/$registration_id/operations/[operation_id]?api-version=2021-06-01
+```
+### PROVISION DEVICES WITH HTTP
+```sh
+python3 provision_http_x509.py testdevice3
 ```
 ### PROVISION DEVICES WITH MQTT
 **TODO**
