@@ -58,9 +58,10 @@ Let's create 3 certificates from the intermediate cert for our tests:
 ./certGen.sh create_device_certificate_from_intermediate testdevice1
 ./certGen.sh create_device_certificate_from_intermediate testdevice2
 ./certGen.sh create_device_certificate_from_intermediate testdevice3
+./certGen.sh create_device_certificate_from_intermediate testdevice4
 ```
 
-You must be wondering, why 3 devices? I don't know, why not 4? Or 2? Do as you wish!
+You must be wondering, why 4 devices? I don't know, why not 5? Or 3? Do as you wish!
 
 ## Setting up Infrastructure
 We need to create all the Azure resources and configuration needed to connect devices. This repo has scripts to set that up for you.
@@ -108,7 +109,7 @@ More specifically, the command above sets the right values for the variables:
 - `PROVISIONING_HOST` which is the hostname for DPS (default is `global.azure-devices-provisioning.net`)
 - `PROVISIONING_IDSCOPE` which is the ID for your IoT Hub DPS Instance
 
-### Provision a Device and Connect Using the Azure IoT SDK for Pythin
+### Provision a Device and Connect Using the Azure IoT SDK for Python
 Install python requirements first
 ```sh
 pip3 install -r requirements.txt
@@ -142,9 +143,21 @@ curl -L -i -X GET --cert certificates/certs/$registration_id-full-chain.cert.pem
             https://$PROVISIONING_HOST/$PROVISIONING_IDSCOPE/registrations/$registration_id/operations/$OPERATION_ID?api-version=2021-06-01
 
 ```
-### Provision a Device Using MQTT
+### Provision a Device Using Python and HTTP
+The [provision_http_x509.py](/provision_http_x509.py) script uses python and HTTPS requests to provision devices. The script simply adds a more robust flow and ease of use to the cURL calls in the section above. The env variables are still needed, so set them with the terraform command first and then run the script with the desired `device_id` as shown below.
+```sh
+$(terraform output -raw environment_variable_setup)
+python3 provision_http_x509.py testdevice3
+```
+
+### Provision a Device Using Python and MQTT
 [Azure IoT Hub DPS supports plain MQTT](https://learn.microsoft.com/en-us/azure/iot-dps/iot-dps-mqtt-support) to provision devices too.
-**TODO**
+
+The [provision_sync_mqtt_x509.py](/provision_sync_mqtt_x509.py) script uses python and MQTT messages to provision devices just as [shown in this article](https://learn.microsoft.com/en-us/azure/iot-dps/iot-dps-mqtt-support). The env variables are still needed, so set them with the terraform command first and then run the script with the desired `device_id` as shown below.
+```sh
+$(terraform output -raw environment_variable_setup)
+./provision_sync_mqtt_x509.py testdevice4
+```
 
 ## TL;DR
 All the commands that you need without much context.
@@ -160,6 +173,7 @@ chmod 700 certGen.sh
 ./certGen.sh create_device_certificate_from_intermediate testdevice1
 ./certGen.sh create_device_certificate_from_intermediate testdevice2
 ./certGen.sh create_device_certificate_from_intermediate testdevice3
+./certGen.sh create_device_certificate_from_intermediate testdevice4
 cd ..
 ```
 ### Create Infrastructure
@@ -192,9 +206,14 @@ curl -L -i -X GET --cert certificates/certs/$registration_id-full-chain.cert.pem
             -H 'Content-Encoding:  utf-8' \
             https://$PROVISIONING_HOST/$PROVISIONING_IDSCOPE/registrations/$registration_id/operations/[operation_id]?api-version=2021-06-01
 ```
+### PROVISION DEVICES WITH HTTP
+```sh
+python3 provision_http_x509.py testdevice3
+```
 ### PROVISION DEVICES WITH MQTT
-**TODO**
-
+```sh
+./provision_sync_mqtt_x509.py testdevice4
+```
 
 ## Cleanup
 Don't leave stuff running! Simply run the command below and it will all be good. You don't need to remove your certificates from your repo (they're gitignored **and** you can reuse them).

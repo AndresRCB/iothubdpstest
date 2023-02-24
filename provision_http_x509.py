@@ -66,6 +66,9 @@ def main():
         print("Registration failed")
         raise SystemExit(2)
 
+    # IoT Hub DPS returns a "retry-after" header with how many seconds you should wait
+    # before checking the operation; however, we purposely don't wait here and use a
+    # basic exponential backoff strategy to showcase "eager" attempts and their status
     for attempt in range(4):
         time.sleep(pow(2, attempt))
         print(f'Checking registration status. Attempt {attempt+1} out of 5...')
