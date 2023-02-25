@@ -1,0 +1,101 @@
+version: '3'
+
+tasks:
+  cert:chain:
+    dir: certificates
+    cmds:
+      - chmod 700 certGen.sh
+      - ./certGen.sh create_root_and_intermediate
+    sources:
+      - certGen.sh
+      - openssl_device_intermediate_ca.cnf
+      - openssl_root_ca.cnf
+    generates:
+      - certs/azure-iot-test-only.chain.ca.cert.pem
+      - certs/azure-iot-test-only.intermediate.cert.pem
+      - certs/azure-iot-test-only.root.ca.cert.pem
+      - private/azure-iot-test-only.intermediate.key.pem
+      - private/azure-iot-test-only.root.ca.key.pem
+
+  cert:device:
+    dir: certificates
+    deps: [cert:chain]
+    cmds:
+      - ./certGen.sh create_device_certificate_from_intermediate {{default "testdevice" .DEVICE}}
+
+  cert:clean:
+    dir: certificates
+    cmds:
+      - rm -rf certs csr intermediateCerts newcerts private index* serial*
+
+  pyinit:
+    cmds:
+      - pip3 install -r requirements.txt
+    sources:
+      - requirements.txt
+
+
+  init:
+    cmds:
+      - rm -f .terraform.lock.hcl
+      - terraform init -upgrade
+    sources:
+      - providers.tf
+      - main.tf
+    generates:
+      - .terraform.lock.hcl
+      - terraform.tfstate
+
+  infra:
+    deps: [init, cert:chain]
+    cmds:
+      - terraform apply -auto-approve
+    sources:
+      - certificates/certs/azure-iot-test-only.chain.ca.cert.pem
+      - certificates/certs/azure-iot-test-only.intermediate.cert.pem
+      - certificates/certs/azure-iot-test-only.root.ca.cert.pem
+      - providers.tf
+      - main.tf
+      - variables.tf
+      - outputs.tf
+    generates:
+      - terraform.tfstate
+
+  up:
+    deps: [infra, pyinit]
+    cmds:
+      - cmd: $(terraform output -raw enrollment_group_create_command)
+        ignore_error: true
+      - terraform output -raw environment_variable_setup > .env
+    sources:
+      - terraform.tfstate
+    generates:
+      - .env
+
+  dps:sdk:
+    deps: [up]
+    dotenv: ['.env']
+    cmds:
+      - python3 provision_sdk_x509.py {{default "testdevice" .DEVICE}}
+  
+  dps:http:
+    deps: [up]
+    dotenv: ['.env']
+    cmds:
+      - python3 provision_http_x509.py {{default "testdevice" .DEVICE}}
+
+  dps:mqtt:
+    deps: [up]
+    dotenv: ['.env']
+    cmds:
+      - python3 provision_sync_mqtt_x509.py {{default "testdevice" .DEVICE}}
+  
+  down:
+    cmds:
+      - terraform destroy -auto-approve
+
+  clean:
+    cmds:
+      - task: down
+      - rm .env
+      - task: cert:clean

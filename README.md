@@ -42,6 +42,9 @@ Run the following command:
 az extension add --name azure-iot
 ```
 
+### [OPTIONAL] Task
+Install [Task](https://taskfile.dev/installation/) if you want to leverage this repo's [Taskfile.yml](./Taskfile.yml). Note that the Taskfile makes things extremely simple to run, but that means that everything that is going on won't be as clear. If you understand the process and what's going on well enough, then leverage Task and skip to the [using task](#using-task) section.
+
 ## Creating Certificates
 
 This repo ignores certificate files, keys and other magical constructs you'll need to generate, so go into the [certificates](/certificates/) directory and run the following commands to generate them:
@@ -117,7 +120,7 @@ pip3 install -r requirements.txt
 
 Now simulate our device being provisioned and sending 10 messages:
 ```sh
-python3 provision_x509.py testdevice1
+python3 provision_sdk_x509.py testdevice1
 ```
 
 You're free to run that command with other device IDs based on the certs that you create. Fun fact: The Python SDK uses MQTT to provision devices.
@@ -187,7 +190,7 @@ $(terraform output -raw enrollment_group_create_command)
 ```sh
 $(terraform output -raw environment_variable_setup)
 pip3 install -r requirements.txt
-python3 provision_x509.py testdevice1
+python3 provision_sdk_x509.py testdevice1
 ```
 ### PROVISION DEVICES USING cURL
 ```sh
@@ -220,4 +223,33 @@ Don't leave stuff running! Simply run the command below and it will all be good.
 ```sh
 terraform destroy -auto-approve
 ```
+
+## Using Task
+If you're up to speed on the concepts here, your life will be much easier by simply doing this:
+
+Create chain certificates, initialize terraform, deploy infrastructure, set up enrollment group and configure .env:
+```sh
+task up
+```
+Create device certs
+```sh
+task cert:device # uses default device name: testdevice
+task cert:device DEVICE=testdevice2
+task cert:device DEVICE=testdevice3
+```
+Test all kinds of provisioning flows
+```sh
+task dps:sdk # uses default device name: testdevice
+task dps:http DEVICE=testdevice2
+task dps:mqtt DEVICE=testdevice3
+```
+
+You'll find your devices registered with your IoT Hub.
+
+### Task Cleanup
+This destroys terraform infrastructure, temp files and certificates.
+```sh
+task clean
+```
+
 Happy IoTying!

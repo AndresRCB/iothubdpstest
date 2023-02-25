@@ -21,15 +21,9 @@ messages_to_send = 10
 
 
 async def main(registration_id):
-    # x509 = X509(
-    #     cert_file=os.getenv("X509_CERT_FILE"),
-    #     key_file=os.getenv("X509_KEY_FILE"),
-    #     pass_phrase=os.getenv("X509_PASS_PHRASE"),
-    # )
     x509 = X509(
         cert_file=f'certificates/certs/{registration_id}-full-chain.cert.pem',
         key_file=f'certificates/private/{registration_id}.key.pem',
-        # pass_phrase=os.getenv("X509_PASS_PHRASE"),
     )
 
     provisioning_device_client = ProvisioningDeviceClient.create_from_x509_certificate(
