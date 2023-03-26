@@ -35,7 +35,8 @@ class DpsMqttClient:
 
         self.mqttc = mqtt.Client(self.device_id, clean_session=True)
         self.mqttc.username_pw_set(self.username)
-        self.mqttc.tls_set(certfile=f'certificates/private/{self.device_id}.store.pem',
+        self.mqttc.tls_set(certfile=f'certificates/certs/{self.device_id}.cert.pem',
+                           keyfile=f'certificates/private/{self.device_id}.key.pem',
                         cert_reqs=ssl.CERT_REQUIRED)
 
     def build_operation_status_topic(self):

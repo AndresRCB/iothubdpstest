@@ -2,7 +2,7 @@ resource "random_pet" "rg_name" {
   prefix = var.resource_group_name_prefix
 }
 
-resource "azurerm_resource_group" "rg" {
+resource "azurerm_resource_group" "main" {
   location = var.resource_group_location
   name     = random_pet.rg_name.id
 }
@@ -14,49 +14,19 @@ resource "random_string" "sa_name" {
   upper   = false
 }
 
-resource "azurerm_storage_account" "sa" {
+resource "azurerm_storage_account" "main" {
   name                     = random_string.sa_name.id
-  resource_group_name      = azurerm_resource_group.rg.name
-  location                 = azurerm_resource_group.rg.location
+  resource_group_name      = azurerm_resource_group.main.name
+  location                 = azurerm_resource_group.main.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
 }
 
-resource "azurerm_storage_container" "my_terraform_container" {
+resource "azurerm_storage_container" "main" {
   name                  = "mycontainer"
-  storage_account_name  = azurerm_storage_account.sa.name
+  storage_account_name  = azurerm_storage_account.main.name
   container_access_type = "private"
 }
-
-
-# Create an Event Hub & Authorization Rule
-resource "random_pet" "eventhub_namespace_name" {
-  prefix = var.eventhub_namespace_name_prefix
-}
-
-resource "azurerm_eventhub_namespace" "namespace" {
-  name                = random_pet.eventhub_namespace_name.id
-  resource_group_name = azurerm_resource_group.rg.name
-  location            = azurerm_resource_group.rg.location
-  sku                 = "Basic"
-}
-
-resource "azurerm_eventhub" "my_terraform_eventhub" {
-  name                = "myEventHub"
-  resource_group_name = azurerm_resource_group.rg.name
-  namespace_name      = azurerm_eventhub_namespace.namespace.name
-  partition_count     = 2
-  message_retention   = 1
-}
-
-resource "azurerm_eventhub_authorization_rule" "my_terraform_authorization_rule" {
-  resource_group_name = azurerm_resource_group.rg.name
-  namespace_name      = azurerm_eventhub_namespace.namespace.name
-  eventhub_name       = azurerm_eventhub.my_terraform_eventhub.name
-  name                = "acctest"
-  send                = true
-}
-
 
 # Create an IoT Hub
 resource "random_pet" "iothub_name" {
@@ -64,10 +34,10 @@ resource "random_pet" "iothub_name" {
   length = 1
 }
 
-resource "azurerm_iothub" "iothub" {
+resource "azurerm_iothub" "main" {
   name                = random_pet.iothub_name.id
-  resource_group_name = azurerm_resource_group.rg.name
-  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.main.name
+  location            = azurerm_resource_group.main.location
 
   sku {
     name     = "S1"
@@ -76,19 +46,13 @@ resource "azurerm_iothub" "iothub" {
 
   endpoint {
     type                       = "AzureIotHub.StorageContainer"
-    connection_string          = azurerm_storage_account.sa.primary_blob_connection_string
+    connection_string          = azurerm_storage_account.main.primary_blob_connection_string
     name                       = "export"
     batch_frequency_in_seconds = 60
     max_chunk_size_in_bytes    = 10485760
-    container_name             = azurerm_storage_container.my_terraform_container.name
+    container_name             = azurerm_storage_container.main.name
     encoding                   = "Avro"
     file_name_format           = "{iothub}/{partition}_{YYYY}_{MM}_{DD}_{HH}_{mm}"
-  }
-
-  endpoint {
-    type              = "AzureIotHub.EventHub"
-    connection_string = azurerm_eventhub_authorization_rule.my_terraform_authorization_rule.primary_connection_string
-    name              = "export2"
   }
 
   route {
@@ -99,18 +63,10 @@ resource "azurerm_iothub" "iothub" {
     enabled        = true
   }
 
-  route {
-    name           = "export2"
-    source         = "DeviceMessages"
-    condition      = "true"
-    endpoint_names = ["export2"]
-    enabled        = true
-  }
-
   enrichment {
     key            = "tenant"
     value          = "$twin.tags.Tenant"
-    endpoint_names = ["export", "export2"]
+    endpoint_names = ["export"]
   }
 
   cloud_to_device {
@@ -129,10 +85,10 @@ resource "azurerm_iothub" "iothub" {
 }
 
 #Create IoT Hub Access Policy
-resource "azurerm_iothub_shared_access_policy" "hub_access_policy" {
+resource "azurerm_iothub_shared_access_policy" "main" {
   name                = "terraform-policy"
-  resource_group_name = azurerm_resource_group.rg.name
-  iothub_name         = azurerm_iothub.iothub.name
+  resource_group_name = azurerm_resource_group.main.name
+  iothub_name         = azurerm_iothub.main.name
 
   registry_read   = true
   registry_write  = true
@@ -145,10 +101,10 @@ resource "random_pet" "dps_name" {
   length = 1
 }
 
-resource "azurerm_iothub_dps" "dps" {
+resource "azurerm_iothub_dps" "main" {
   name                = random_pet.dps_name.id
-  resource_group_name = azurerm_resource_group.rg.name
-  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.main.name
+  location            = azurerm_resource_group.main.location
   allocation_policy   = "Hashed"
 
   sku {
@@ -157,8 +113,8 @@ resource "azurerm_iothub_dps" "dps" {
   }
 
   linked_hub {
-    connection_string       = azurerm_iothub_shared_access_policy.hub_access_policy.primary_connection_string
-    location                = azurerm_resource_group.rg.location
+    connection_string       = azurerm_iothub_shared_access_policy.main.primary_connection_string
+    location                = azurerm_resource_group.main.location
     allocation_weight       = 150
     apply_allocation_policy = true
   }
@@ -166,9 +122,18 @@ resource "azurerm_iothub_dps" "dps" {
 
 resource "azurerm_iothub_dps_certificate" "root" {
   name                = "root"
-  resource_group_name = azurerm_resource_group.rg.name
-  iot_dps_name        = azurerm_iothub_dps.dps.name
-  is_verified = true
+  resource_group_name = azurerm_resource_group.main.name
+  iot_dps_name        = azurerm_iothub_dps.main.name
+  is_verified         = true
 
   certificate_content = filebase64("./certificates/certs/azure-iot-test-only.root.ca.cert.pem")
+}
+
+resource "azurerm_iothub_dps_certificate" "intermediate" {
+  name                = "intermediate"
+  resource_group_name = azurerm_resource_group.main.name
+  iot_dps_name        = azurerm_iothub_dps.main.name
+  is_verified         = true
+
+  certificate_content = filebase64("./certificates/certs/azure-iot-test-only.intermediate.cert.pem")
 }

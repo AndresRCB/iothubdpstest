@@ -22,7 +22,7 @@ messages_to_send = 10
 
 async def main(registration_id):
     x509 = X509(
-        cert_file=f'certificates/certs/{registration_id}-full-chain.cert.pem',
+        cert_file=f'certificates/certs/{registration_id}.cert.pem',
         key_file=f'certificates/private/{registration_id}.key.pem',
     )
 
