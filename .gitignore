@@ -34,8 +34,7 @@ override.tf.json
 # Ignore generated cert files
 certificates/**
 !certificates/certGen.sh
-!certificates/openssl_device_intermediate_ca.cnf
-!certificates/openssl_root_ca.cnf
+!certificates/openssl.cnf
 my.tfvars
 
 

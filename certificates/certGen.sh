@@ -18,14 +18,18 @@ set -o pipefail # Exit if pipe failed
 
 root_ca_dir="."
 home_dir="."
-algorithm="genrsa"
-genpkey_algorithm="RSA"
+if [ "$USE_RSA" = true ] ; then
+    algorithm="-algorithm RSA"
+    pkeyopts="-pkeyopt rsa_keygen_bits:4096"
+else
+    algorithm="-algorithm EC"
+    pkeyopts="-pkeyopt ec_param_enc:named_curve -pkeyopt ec_paramgen_curve:prime256v1"
+fi
 COUNTRY="US"
 STATE="WA"
 LOCALITY="Redmond"
 ORGANIZATION_NAME="My Organization"
 root_ca_password="1234"
-key_bits_length="4096"
 days_till_expire=30
 ca_chain_prefix="azure-iot-test-only.chain.ca"
 intermediate_ca_dir="."
@@ -57,15 +61,16 @@ function warn_certs_not_for_production()
 function generate_root_ca()
 {
     local common_name="Azure IoT Hub CA Cert Test Only"
-    local password_cmd=" -aes256 -passout pass:${root_ca_password} "
+    local password_cmd=" -aes256 -pass pass:${root_ca_password} "
 
     cd "${home_dir}"
     echo "Creating the Root CA Private Key"
 
-    openssl "${algorithm}" \
+    openssl genpkey ${algorithm} \
             ${password_cmd} \
-            -out "${root_ca_dir}/private/${root_ca_prefix}.key.pem" \
-            ${key_bits_length}
+            ${pkeyopts} \
+            -out "${root_ca_dir}/private/${root_ca_prefix}.key.pem"
+            
     [ $? -eq 0 ] || exit $?
     chmod 400 "${root_ca_dir}/private/${root_ca_prefix}.key.pem"
     [ $? -eq 0 ] || exit $?
@@ -109,15 +114,15 @@ function generate_intermediate_ca()
 {
     local common_name="Azure IoT Hub Intermediate Cert Test Only"
 
-    local password_cmd=" -aes256 -passout pass:${intermediate_ca_password} "
+    local password_cmd=" -aes256 -pass pass:${intermediate_ca_password} "
     echo "Creating the Intermediate Device CA"
     echo "-----------------------------------"
     cd "${home_dir}"
 
-    openssl "${algorithm}" \
+    openssl genpkey ${algorithm} \
             ${password_cmd} \
-            -out "${intermediate_ca_dir}/private/${intermediate_ca_prefix}.key.pem" \
-            ${key_bits_length}
+            ${pkeyopts} \
+            -out "${intermediate_ca_dir}/private/${intermediate_ca_prefix}.key.pem"
     [ $? -eq 0 ] || exit $?
     chmod 400 "${intermediate_ca_dir}/private/${intermediate_ca_prefix}.key.pem"
     [ $? -eq 0 ] || exit $?
@@ -201,9 +206,9 @@ function generate_device_certificate_common()
     echo "----------------------------------------"
     cd "${home_dir}"
 
-    openssl genpkey -algorithm "${genpkey_algorithm}" \
-            -out "${certificate_dir}/private/${device_prefix}.key.pem" \
-            -pkeyopt rsa_keygen_bits:${key_bits_length}
+    openssl genpkey ${algorithm} \
+            ${pkeyopts} \
+            -out "${certificate_dir}/private/${device_prefix}.key.pem" 
     [ $? -eq 0 ] || exit $?
     chmod 444 "${certificate_dir}/private/${device_prefix}.key.pem"
     [ $? -eq 0 ] || exit $?

@@ -26,7 +26,7 @@ def registration_request(device_id):
     response = requests.put(registration_url(device_id),
                     json=payload,
                     headers=headers,
-                    cert=f'certificates/private/{device_id}.store.pem')
+                    cert=(f'certificates/certs/{device_id}.cert.pem',f'certificates/private/{device_id}.key.pem'))
     if response.status_code < 200 and response.status_code >= 300:
         return ''
     json_response = json.loads(response.text)
